@@ -116,18 +116,28 @@ export async function testBackendConnection(url: string, apiKey?: string): Promi
       headers,
     });
 
-    if (!res.ok) {
+    const data = await res.json();
+
+    if (res.status === 401 && data?.error === 'LTA_ACCOUNT_KEY_NOT_CONFIGURED') {
       return {
-        success: false,
-        message: `HTTP Error ${res.status}: ${res.statusText}`,
+        success: true,
+        message: 'Serverless endpoint (/api/busarrival) is active! Set your LTA_ACCOUNT_KEY environment variable when ready to query live LTA DataMall servers.',
+        sampleData: data,
       };
     }
 
-    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        message: data?.message || `HTTP Error ${res.status}: ${res.statusText}`,
+        sampleData: data,
+      };
+    }
+
     const serviceCount = Array.isArray(data.Services) ? data.Services.length : 0;
     return {
       success: true,
-      message: `Connected successfully! Found ${serviceCount} bus services at Stop 01012.`,
+      message: `Connected successfully! Found ${serviceCount} bus services for BusStopCode ${testUrl.searchParams.get('BusStopCode')}.`,
       sampleData: data,
     };
   } catch (err: unknown) {

@@ -35,22 +35,21 @@ export const BackendConfigModal: React.FC<BackendConfigModalProps> = ({ onClose,
     setTestResult(result);
   };
 
-  const sampleExpressCode = `// Express proxy route example:
-app.get('/api/lta/bus-arrival', async (req, res) => {
-  const { BusStopCode, ServiceNo } = req.query;
-  const ltaUrl = new URL('https://datamall2.mytransport.sg/ltaodataservice/BusArrivalv2');
-  if (BusStopCode) ltaUrl.searchParams.set('BusStopCode', BusStopCode);
-  if (ServiceNo) ltaUrl.searchParams.set('ServiceNo', ServiceNo);
+  const sampleExpressCode = `// Serverless proxy route (/api/busarrival.ts):
+// GET /api/busarrival?BusStopCode=83139
+// Upstream: https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival?BusStopCode=83139
 
-  const response = await fetch(ltaUrl.toString(), {
-    headers: {
-      'AccountKey': process.env.LTA_DATAMALL_API_KEY || '',
-      'Accept': 'application/json'
-    }
-  });
-  const data = await response.json();
-  res.json(data);
-});`;
+const url = new URL('https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival');
+url.searchParams.set('BusStopCode', req.query.BusStopCode || '83139');
+
+const response = await fetch(url.toString(), {
+  headers: {
+    'AccountKey': process.env.LTA_ACCOUNT_KEY || '',
+    'accept': 'application/json'
+  }
+});
+const data = await response.json();
+res.json(data);`;
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(sampleExpressCode);
@@ -115,18 +114,27 @@ app.get('/api/lta/bus-arrival', async (req, res) => {
           {config.useCustomBackend && (
             <div className="space-y-4 p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/30 dark:bg-blue-950/20">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Backend API Endpoint URL
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                    Backend API Endpoint URL
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, backendUrl: '/api/busarrival' })}
+                    className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Use Built-in /api/busarrival
+                  </button>
+                </div>
                 <input
                   type="text"
-                  placeholder="e.g. http://localhost:3000/api/lta/bus-arrival or https://api.mytransit.sg"
+                  placeholder="e.g. /api/busarrival or https://api.mytransit.sg"
                   value={config.backendUrl}
                   onChange={(e) => setConfig({ ...config, backendUrl: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  The frontend will query: <code className="text-slate-700 dark:text-slate-300">{`{backendUrl}?BusStopCode={code}`}</code>
+                  Serverless function at <code className="text-slate-700 dark:text-slate-300">/api/busarrival.ts</code> forwards to <code className="text-slate-700 dark:text-slate-300">https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival</code>
                 </p>
               </div>
 
